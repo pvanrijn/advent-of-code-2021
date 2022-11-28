@@ -16,9 +16,6 @@
 #   -
 # Loop through literal values in subpackets
 
-import math
-
-
 def hex_to_bit(hex_string):
     cdict = {
         '0': '0000', '1': '0001', '2': '0010', '3': '0011',
@@ -64,27 +61,16 @@ def parse_literal_value_bits(bits):
     print(f'\t* Value bits: {value_bits}')
     return bit_to_int(value_bits), bits_processed
 
-def apply_packet_type_operation(packet_type, values):
 
-    func_dict = {
-        0: lambda v: sum(v),
-        1: lambda v: math.prod(v),
-        2: lambda v: min(v),
-        3: lambda v: max(v),
-        5: lambda v: 1 if v[0] > v[1] else 0,
-        6: lambda v: 1 if v[0] < v[1] else 0,
-        7: lambda v: 1 if v[0] == v[1] else 0
-    }
+def parse_packet(bits, version_total=0, value_total=0):
 
-    return func_dict[packet_type](values)
-
-def parse_packet(bits, version_total=0):
+    if len(bits) < 11:
+        return bits, version_total, value_total
 
     print(f'\n# Original bits: {bits}')
 
     packet_version, packet_type, bits = bit_to_int(bits[:3]), bit_to_int(bits[3:6]), bits[6:]
     version_total += packet_version
-    values = []
 
     print(f'# New bits:            {bits}')
     print(f'# Packet version: {packet_version}')
@@ -93,48 +79,39 @@ def parse_packet(bits, version_total=0):
 
     if is_literal_value(packet_type):
         literal_value, bits_processed = parse_literal_value_bits(bits)
+        value_total += literal_value
         bits = bits[bits_processed:]
-        return bits, version_total, literal_value
 
     else:
         set_bit, bits = bits[0], bits[1:]
-
         if set_bit == '0':  # parse packets in x bits
-
             num_packet_bits, bits = bits[:15], bits[15:]
             print(f'\t* Num packet bits raw: {num_packet_bits}')
-
             num_packet_bits = bit_to_int(num_packet_bits)
             print(f'\t* Num packet bits:     {num_packet_bits}')
-
             packet_bits, bits = bits[:num_packet_bits], bits[num_packet_bits:]
-            while len(packet_bits) >= 10:
-                print(packet_bits)
-                packet_bits, version_total, new_value = parse_packet(packet_bits, version_total=version_total)
-                values.append(new_value)
-
+            while len(packet_bits) >= 11:
+                packet_bits, version_total, value_total = parse_packet(packet_bits, version_total=version_total,
+                                                                       value_total=value_total)
         else:  # parse x packets
             num_packets, bits = bits[:11], bits[11:]
             num_packets = bit_to_int(num_packets)
             print(f'\t* Num packets: {num_packets}')
             while num_packets > 0:
-                bits, version_total, new_value = parse_packet(bits, version_total=version_total)
-                values.append(new_value)
+                bits, version_total, value_total = parse_packet(bits, version_total=version_total,
+                                                                value_total=value_total)
                 num_packets -= 1
 
-    value = apply_packet_type_operation(packet_type, values)
-    return bits, version_total, value
+    return bits, version_total, value_total
 
 
-# with open('test-day2.txt', 'r') as f:
 with open('input.txt', 'r') as f:
     lines = [l.rstrip() for l in f.readlines()]
 
 for hex_line in lines:
-    print(f'\n### HEX: {hex_line}')
     bit_line = hex_to_bit(hex_line)
-    bits, version_total, values = parse_packet(bit_line)
+    bits, version_total, value_total = parse_packet(bit_line)
 
     print(f'\nFinal bits: {bits}')
     print(f'Final version total: {version_total}')
-    print(f'Final value total: {values}\n')
+    print(f'Final value total: {value_total}\n')

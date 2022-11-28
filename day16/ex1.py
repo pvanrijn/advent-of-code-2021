@@ -29,17 +29,17 @@ def literal_val_string_to_int(bit_string):
     concat_bits = ''
     num_of_bits = 0
     nums = []
-    
+
     for i in range(0, len(bit_string)-5, 5):
         bit = bit_string[i:i+5]
         concat_bits = concat_bits + bit[1:]
         num_of_bits += 1
-        
+
         if bit[0] == 0:
             nums.append(bit_to_int(concat_bits))
             concat_bits = ''
             break
-    
+
     if concat_bits:
         nums.append(bit_to_int(concat_bits))
         num_of_bits += 1
@@ -52,11 +52,11 @@ def is_literal_val(i):
 def is_operator(i):
     return True if i == 11 or i == 15 else False
 
-def parse_packet(p, is_new_packet):
+def parse_packet(p, new_packet):
     p_int = bit_to_int(p)
     p_len = len(p)
-    
-    if is_new_packet:
+
+    if new_packet:
         return p_int, p_len
 
     next_p_len = 0
@@ -76,23 +76,23 @@ def parse_packet(p, is_new_packet):
 
     return p_int, next_p_len
 
-def parse_bit_string(bstring):
-    p_len = 3
-    is_new_packet = True
+def parse_bit_string(bstring, p_len=3, new_packet=True):
+
     total_versions = 0
 
     while True:
         packet, bit_string = bit_string[:p_len], bit_string[p_len:]
-        p_val, next_plen = parse_packet(packet, is_new_packet=is_new_packet)
+        p_val, next_plen = parse_packet(packet, new_packet)
 
-        if is_new_packet:
-            is_new_packet = False
+        if new_packet:
+            total_versions += p_val
+            new_packet = False
             continue
 
         if is_operator(p_len):
 #            is_new_packet = True
             return parse_bit_string(bstring[p_len:])
-        
+
         if is_literal_val(p_val):
             num_of_bits, value = literal_val_string_to_int(bit_string)
 
@@ -114,18 +114,18 @@ version_lengths = [1, 3]
 print(bit_string)
 
 while False:
-    
+
     packet, bit_string = bit_string[:p_len], bit_string[p_len:]
-    
+
     p_val, next_plen = parse_packet(packet, new_packet=new_packet)
 
 #    print(packet, p_len, p_val)
-  
+
     if is_new_packet:
         is_new_packet = False
         continue
-    
-    
+
+
 
     if is_operator(p_len):
 
@@ -134,19 +134,19 @@ while False:
             skip_bits = num_of_bits * 5
 #            total_value += value
 #            print(value, total_value)
-            
+
             if len(bit_string) - skip_bits < 5:
                 break
-            
+
             bit_string = bit_string[skip_bits:]
-    
+
     elif is_literal_val(p_val):
         num_of_bits, value = literal_val_string_to_int(bit_string)
 #        total_value += value
-    
+
     if len(bit_string) < 5:
         break
 
     p_len = next_plen
- 
+
 print(total_value)
